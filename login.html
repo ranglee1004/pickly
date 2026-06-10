@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PICKLY — 로그인</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#EEEDF8;
+  --white:#fff;
+  --border:#DDD9F5;
+  --text:#1A1535;
+  --text2:#5A5480;
+  --text3:#A8A3C8;
+  --accent:#6C5CE7;
+  --accent2:#8B7FF5;
+  --accent-light:#EEF0FA;
+  --mint:#A29BFE;
+  --mint-light:#F0EEFF;
+}
+body{font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#C8C5F0 0%,#D4D0F5 35%,#C5C8F0 70%,#D0CBF5 100%);min-height:100vh;display:flex;align-items:stretch;}
+
+.lp-left{
+  width:50%;
+  background:linear-gradient(160deg,#1E1B3A 0%,#2D2660 45%,#6C5CE7 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:56px;position:relative;overflow:hidden;
+}
+.lp-left::before{content:'';position:absolute;width:480px;height:480px;border-radius:50%;background:rgba(255,255,255,0.04);top:-140px;left:-120px;}
+.lp-left::after{content:'';position:absolute;width:360px;height:360px;border-radius:50%;background:rgba(255,255,255,0.04);bottom:-100px;right:-80px;}
+.lp-deco{position:absolute;width:200px;height:200px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);top:40%;left:60%;transform:translate(-50%,-50%);}
+.lp-deco2{position:absolute;width:320px;height:320px;border-radius:50%;border:1px solid rgba(255,255,255,0.05);top:40%;left:60%;transform:translate(-50%,-50%);}
+
+.lp-logo{position:absolute;top:36px;left:44px;display:flex;align-items:center;gap:10px;}
+.lp-logo-icon{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,0.2);}
+.lp-logo-text{font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.3px;}
+
+.lp-content{text-align:center;position:relative;z-index:1;}
+.lp-title{font-size:32px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:14px;letter-spacing:-0.5px;}
+.lp-sub{font-size:14px;color:rgba(255,255,255,0.65);line-height:1.75;margin-bottom:44px;max-width:340px;margin-left:auto;margin-right:auto;}
+
+.preview-cards{display:flex;gap:12px;justify-content:center;}
+.pc{background:rgba(255,255,255,0.1);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.15);border-radius:18px;padding:16px 18px;width:126px;transition:transform 0.2s;}
+.pc:nth-child(2){transform:translateY(-10px);}
+.pc:nth-child(3){transform:translateY(4px);}
+.pc-name{font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);margin-bottom:10px;}
+.pc-bar{height:4px;border-radius:2px;background:rgba(255,255,255,0.15);margin-bottom:8px;}
+.pc-fill{height:100%;border-radius:2px;background:rgba(255,255,255,0.8);}
+.pc-num{font-size:20px;font-weight:800;color:#fff;}
+.pc-lbl{font-size:9px;color:rgba(255,255,255,0.5);margin-top:2px;}
+
+.lp-right{flex:1;display:flex;align-items:center;justify-content:center;padding:56px 48px;}
+.lp-form{width:100%;max-width:400px;}
+
+.tabs{display:flex;background:var(--accent-light);border-radius:12px;padding:4px;margin-bottom:28px;}
+.tab{flex:1;text-align:center;padding:10px;border-radius:9px;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.15s;}
+.tab.on{background:#fff;color:var(--accent);box-shadow:0 2px 10px rgba(108,92,231,0.12);}
+
+.form-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:5px;letter-spacing:-0.3px;}
+.form-sub{font-size:13px;color:var(--text2);margin-bottom:24px;}
+.form-sub a{color:var(--accent2);font-weight:700;cursor:pointer;text-decoration:none;}
+.form-sub a:hover{text-decoration:underline;}
+
+.social-btns{display:flex;flex-direction:column;gap:9px;margin-bottom:20px;}
+.s-btn{width:100%;padding:12px 18px;border-radius:12px;border:1.5px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;gap:9px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;transition:all 0.15s;font-family:'Nunito',sans-serif;}
+.s-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);}
+
+.divrow{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.divline{flex:1;height:1px;background:var(--border);}
+.divtxt{font-size:11px;color:var(--text3);font-weight:700;}
+
+.fgroup{margin-bottom:14px;}
+.flabel{font-size:12px;font-weight:700;color:var(--text);display:block;margin-bottom:5px;}
+.finput{width:100%;padding:12px 14px;border-radius:11px;border:1.5px solid var(--border);background:#fff;font-size:13px;color:var(--text);font-family:'Nunito',sans-serif;outline:none;transition:border-color 0.15s;}
+.finput:focus{border-color:var(--accent);}
+.finput::placeholder{color:var(--text3);}
+.input-wrap{position:relative;}
+.input-wrap .finput{padding-right:44px;}
+.eye-btn{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:var(--text3);}
+
+.form-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+.remember{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;}
+.remember input{accent-color:var(--accent);width:14px;height:14px;}
+.forgot{font-size:12px;color:var(--accent2);font-weight:700;cursor:pointer;}
+
+.submit-btn{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#6C5CE7,#A29BFE);color:#fff;font-size:14px;font-weight:800;font-family:'Nunito',sans-serif;cursor:pointer;box-shadow:0 6px 20px rgba(108,92,231,0.25);transition:opacity 0.15s;margin-bottom:16px;letter-spacing:-0.2px;}
+.submit-btn:hover{opacity:0.9;}
+
+.bottom-link{text-align:center;font-size:12px;color:var(--text2);}
+.bottom-link a{color:var(--accent2);font-weight:700;cursor:pointer;text-decoration:none;}
+.bottom-link a:hover{text-decoration:underline;}
+
+.err{font-size:11px;color:#E05252;font-weight:600;display:none;margin-bottom:10px;}
+.err.show{display:block;}
+
+.success-box{display:none;text-align:center;padding:24px 0;}
+.success-box.show{display:block;}
+.s-emoji{font-size:52px;margin-bottom:14px;}
+.s-title{font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px;}
+.s-sub{font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6;}
+.goto-btn{display:inline-block;padding:12px 28px;border-radius:12px;background:linear-gradient(135deg,#6C5CE7,#A29BFE);color:#fff;font-weight:700;font-size:14px;cursor:pointer;border:none;font-family:'Nunito',sans-serif;transition:opacity 0.15s;text-decoration:none;box-shadow:0 4px 14px rgba(108,92,231,0.25);}
+.goto-btn:hover{opacity:0.9;}
+</style>
+</head>
+<body>
+<div class="lp-left">
+  <div class="lp-deco"></div><div class="lp-deco2"></div>
+  <div class="lp-logo">
+    <div class="lp-logo-icon">PK</div>
+    <div class="lp-logo-text">PICKLY</div>
+  </div>
+  <div class="lp-content">
+    <div class="lp-title">AI 답변을 비교하고<br>직접 선택하세요</div>
+    <div class="lp-sub">여러 AI의 답변을 한 화면에서 비교하고 근거와 출처를 확인한 뒤 원하는 답을 선택하세요.</div>
+    <div class="preview-cards">
+      <div class="pc"><div class="pc-name">GPT-4o · #1</div><div class="pc-bar"><div class="pc-fill" style="width:78%"></div></div><div class="pc-num">78%</div><div class="pc-lbl">채택률</div></div>
+      <div class="pc"><div class="pc-name">Claude · #2</div><div class="pc-bar"><div class="pc-fill" style="width:65%"></div></div><div class="pc-num">65%</div><div class="pc-lbl">채택률</div></div>
+      <div class="pc"><div class="pc-name">Gemini · #3</div><div class="pc-bar"><div class="pc-fill" style="width:44%"></div></div><div class="pc-num">44%</div><div class="pc-lbl">채택률</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="lp-right">
+  <div class="lp-form">
+    <div class="tabs">
+      <div class="tab on" onclick="switchTab('login')">로그인</div>
+      <div class="tab" onclick="switchTab('signup')">회원가입</div>
+    </div>
+
+    <div id="lf">
+      <div class="form-title">다시 오셨군요! 👋</div>
+      <div class="form-sub">계정이 없으신가요? <a onclick="switchTab('signup')">무료로 시작하기</a></div>
+      <div class="social-btns">
+        <button class="s-btn" onclick="socialGo('Google')">🌐&nbsp; Google로 계속하기</button>
+        <button class="s-btn" onclick="socialGo('GitHub')">⌥&nbsp; GitHub로 계속하기</button>
+      </div>
+      <div class="divrow"><div class="divline"></div><div class="divtxt">또는 이메일로</div><div class="divline"></div></div>
+      <div class="fgroup"><label class="flabel">이메일</label><input class="finput" id="le" type="email" placeholder="hello@example.com"></div>
+      <div class="fgroup"><label class="flabel">비밀번호</label><div class="input-wrap"><input class="finput" id="lp" type="password" placeholder="비밀번호 입력"><button class="eye-btn" onclick="togglePw('lp',this)">👁</button></div></div>
+      <div class="err" id="lerr">이메일 또는 비밀번호를 확인해주세요.</div>
+      <div class="form-row"><label class="remember"><input type="checkbox"> 로그인 유지</label><span class="forgot">비밀번호 찾기</span></div>
+      <button class="submit-btn" onclick="doLogin()">로그인</button>
+      <div class="bottom-link">계정이 없으신가요? <a onclick="switchTab('signup')">회원가입</a></div>
+    </div>
+
+    <div id="sf" style="display:none">
+      <div class="form-title">시작해볼까요? 🚀</div>
+      <div class="form-sub">이미 계정이 있으신가요? <a onclick="switchTab('login')">로그인</a></div>
+      <div class="social-btns">
+        <button class="s-btn" onclick="socialGo('Google')">🌐&nbsp; Google로 시작하기</button>
+        <button class="s-btn" onclick="socialGo('GitHub')">⌥&nbsp; GitHub로 시작하기</button>
+      </div>
+      <div class="divrow"><div class="divline"></div><div class="divtxt">또는 이메일로</div><div class="divline"></div></div>
+      <div class="fgroup"><label class="flabel">이름</label><input class="finput" id="sn" placeholder="홍길동"></div>
+      <div class="fgroup"><label class="flabel">이메일</label><input class="finput" id="se" type="email" placeholder="hello@example.com"></div>
+      <div class="fgroup"><label class="flabel">비밀번호</label><div class="input-wrap"><input class="finput" id="sp" type="password" placeholder="8자 이상 입력"><button class="eye-btn" onclick="togglePw('sp',this)">👁</button></div></div>
+      <div class="err" id="serr">모든 항목을 입력해주세요.</div>
+      <div style="margin-bottom:20px"></div>
+      <button class="submit-btn" onclick="doSignup()">무료로 시작하기</button>
+      <div class="bottom-link">이미 계정이 있으신가요? <a onclick="switchTab('login')">로그인</a></div>
+    </div>
+
+    <div class="success-box" id="sb">
+      <div class="s-emoji">🎉</div>
+      <div class="s-title">로그인 성공!</div>
+      <div class="s-sub">PICKLY에 오신 것을 환영합니다.<br>AI 답변 비교를 시작해보세요.</div>
+      <a href="index.html" class="goto-btn">비교 시작하기 →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('on',(t==='login'&&i===0)||(t==='signup'&&i===1)));
+  document.getElementById('lf').style.display=t==='login'?'block':'none';
+  document.getElementById('sf').style.display=t==='signup'?'block':'none';
+  document.getElementById('sb').classList.remove('show');
+  ['lerr','serr'].forEach(id=>document.getElementById(id).classList.remove('show'));
+}
+function togglePw(id,btn){const el=document.getElementById(id);el.type=el.type==='password'?'text':'password';btn.textContent=el.type==='password'?'👁':'🙈';}
+function doLogin(){
+  window.location.href='index.html';
+}
+function doSignup(){
+  window.location.href='index.html';
+}
+function socialGo(name){
+  window.location.href='index.html';
+}
+document.getElementById('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('sp').addEventListener('keydown',e=>{if(e.key==='Enter')doSignup();});
+</script>
+</body>
+</html>
