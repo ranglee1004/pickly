@@ -1529,50 +1529,24 @@
   </div>
 
   <script>
-    const GEMINI_API_KEY = '';
-
     async function callGemini(prompt) {
-      const res = await fetch(
-        '' + GEMINI_API_KEY,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
-          })
-        }
-      );
-      if (!res.ok) {
-        const err = await res.json();
-        console.error('Gemini error:', err);
-        return 'error: ' + (err.error?.message || res.status);
-      }
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
       const data = await res.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || '응답 없음';
+      return data.text || '응답 없음';
     }
 
-    const OPENAI_API_KEY = '';
-
     async function callGPT(prompt) {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      const res = await fetch('/api/openai', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + OPENAI_API_KEY
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 1000
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
       });
-      if (!res.ok) {
-        const err = await res.json();
-        console.error('GPT error:', err);
-        return 'error: ' + (err.error?.message || res.status);
-      }
       const data = await res.json();
-      return data.choices?.[0]?.message?.content || '응답 없음';
+      return data.text || '응답 없음';
     }
     function getAILogo(name, size) {
       size = size || 22;
@@ -2506,4 +2480,20 @@
 
     function updateSteps(active) {
       [1, 2, 3].forEach(i => {
-        const 
+        const n = document.getElementById('sn' + i);
+        const l = document.getElementById('sl' + i);
+        if (i < active) { n.className = 'step-num done'; l.className = 'step-label done'; }
+        else if (i === active) { n.className = 'step-num active'; l.className = 'step-label active'; }
+        else { n.className = 'step-num todo'; l.className = 'step-label todo'; }
+      });
+      [12, 23].forEach(pair => {
+        const el = document.getElementById('sl' + pair);
+        if (el) el.className = 'step-line' + (active > Math.floor(pair / 10) ? ' done' : '');
+      });
+    }
+
+    document.getElementById('qi').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  </script>
+</body>
+
+</html>
