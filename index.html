@@ -1449,7 +1449,7 @@
         <div class="query-top">
           <span style="color:var(--text3);font-size:16px">🔍</span>
           <input class="query-input" id="qi" placeholder="무엇이든 물어보세요...">
-          <button class="query-go" onclick="doSearch()">분석하기 →</button>
+          <button class="query-go" onclick="alert('클릭됨'); doSearch()">분석하기 →</button>
         </div>
       </div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;" id="exChips">
@@ -2491,7 +2491,6 @@
         if (el) el.className = 'step-line' + (active > Math.floor(pair / 10) ? ' done' : '');
       });
     }
-
     document.getElementById('qi').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
   </script>
 </body>
