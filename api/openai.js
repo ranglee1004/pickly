@@ -20,5 +20,6 @@ export default async function handler(req, res) {
   });
 
   const data = await response.json();
-  res.status(200).json(data);
+  const text = data.choices?.[0]?.message?.content || "응답 없음";
+  res.status(200).json({ text });
 }
