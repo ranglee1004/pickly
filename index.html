@@ -2480,97 +2480,29 @@
       const conflictCount = (claims.conflict || []).length;
       const verifyCount = (claims.verify || []).length;
       const uniqueCount = (claims.unique || []).length;
-      const totalClaims = commonCount + conflictCount + verifyCount + uniqueCount;
 
-      // 신뢰도 계산
-      const commonPct = totalClaims > 0 ? Math.round((commonCount / totalClaims) * 100) : 0;
-      const conflictPct = totalClaims > 0 ? Math.round((conflictCount / totalClaims) * 100) : 0;
-      const verifyPct = totalClaims > 0 ? Math.round((verifyCount / totalClaims) * 100) : 0;
-      // 답변 길이 기반 풍부도 (최대 100%)
-      const avgLen = answers.reduce((s, a) => s + (a || '').length, 0) / Math.max(answers.length, 1);
-      const richnessPct = Math.min(100, Math.round(avgLen / 20));
-      // 종합 신뢰도: 공통 많고, 충돌 적고, 내용 풍부할수록 높음
-      const overall = Math.min(99, Math.max(30,
-        Math.round(commonPct * 0.5 + richnessPct * 0.3 + (100 - conflictPct) * 0.2)
-      ));
-
-      const level = overall >= 80
-        ? { txt: '높음', bg: 'var(--common-bg)', color: 'var(--accent)' }
-        : overall >= 60
-          ? { txt: '보통', bg: 'var(--verify-bg)', color: 'var(--verify)' }
-          : { txt: '낮음', bg: 'var(--conflict-bg)', color: 'var(--conflict)' };
-
-      // 바 차트
-      const bars = [
-        { lbl: '공통', pct: commonPct, color: 'var(--accent)' },
-        { lbl: '충돌', pct: conflictPct, color: 'var(--conflict)' },
-        { lbl: '검증', pct: verifyPct, color: 'var(--verify)' },
-        { lbl: '풍부도', pct: richnessPct, color: 'var(--mint)' },
+      const cards = [
+        { icon: '✅', label: '공통 주장', val: commonCount, sub: 'AI 모두 동의', color: 'var(--accent)', bg: 'var(--al)', bar: 'linear-gradient(90deg,#6C5CE7,#A29BFE)' },
+        { icon: '⚡', label: '충돌 주장', val: conflictCount, sub: 'AI 간 의견 불일치', color: 'var(--conflict)', bg: 'var(--conflict-bg)', bar: 'var(--conflict)' },
+        { icon: '🔍', label: '검증 필요', val: verifyCount, sub: '출처 확인 권장', color: 'var(--verify)', bg: 'var(--verify-bg)', bar: 'var(--verify)' },
+        { icon: '💡', label: '고유 관점', val: uniqueCount, sub: '특정 AI만 언급', color: 'var(--unique)', bg: 'var(--unique-bg)', bar: 'var(--unique)' },
       ];
 
-      const chartHTML = bars.map(b =>
-        '<div class="trust-cbar-wrap">'
-        + '<div style="flex:1;display:flex;align-items:flex-end;width:100%">'
-        + '<div class="trust-cbar" style="height:' + b.pct + '%;background:' + b.color + ';opacity:0.85;min-height:4px"></div>'
-        + '</div>'
-        + '<div class="trust-cbar-lbl">' + b.lbl + '</div>'
-        + '<div style="font-size:9px;font-weight:800;color:' + b.color + '">' + b.pct + '%</div>'
-        + '</div>'
-      ).join('');
-
-      // 주장 목록
-      const listHTML = [
-        { icon: '✅', bg: 'var(--al)', label: '공통 주장', val: commonCount + '개', color: 'var(--accent)' },
-        { icon: '⚡', bg: 'var(--conflict-bg)', label: '충돌 주장', val: conflictCount + '개', color: 'var(--conflict)' },
-        { icon: '🔍', bg: 'var(--verify-bg)', label: '검증 필요', val: verifyCount + '개', color: 'var(--verify)' },
-        { icon: '💡', bg: 'var(--unique-bg)', label: '고유 관점', val: uniqueCount + '개', color: 'var(--unique)' },
-      ].map(it =>
-        '<div class="trust-list-item">'
-        + '<div class="trust-list-icon" style="background:' + it.bg + '">' + it.icon + '</div>'
-        + '<div class="trust-list-text">' + it.label + '</div>'
-        + '<div class="trust-list-val" style="color:' + it.color + '">' + it.val + '</div>'
-        + '</div>'
-      ).join('');
-
       panel.innerHTML =
-        '<div class="trust-overview-top">'
-        + '<div class="trust-overview-title">📊 답변 신뢰도 분석</div>'
-        + '<div class="trust-overview-badge" style="background:' + level.bg + ';color:' + level.color + '">' + level.txt + '</div>'
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">'
+        + '<span style="font-size:13px;font-weight:800;color:var(--text);">📊 답변 분석 요약</span>'
+        + '<span style="font-size:11px;color:var(--text3);font-weight:600;">GPT-4o · Gemini 기준</span>'
         + '</div>'
-        + '<div class="trust-big-row">'
-        + '<div class="trust-big-card">'
-        + '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6C5CE7,#A29BFE);border-radius:16px 16px 0 0"></div>'
-        + '<div class="trust-big-label">종합 신뢰도</div>'
-        + '<div class="trust-big-num" style="color:var(--accent)">' + overall + '%</div>'
-        + '<div class="trust-big-sub">AI 답변 분석 기준</div>'
-        + '</div>'
-        + '<div class="trust-big-card">'
-        + '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent);border-radius:16px 16px 0 0"></div>'
-        + '<div class="trust-big-label">공통 주장</div>'
-        + '<div class="trust-big-num" style="color:var(--accent)">' + commonCount + '개</div>'
-        + '<div class="trust-big-sub">AI 모두 동의한 내용</div>'
-        + '</div>'
-        + '<div class="trust-big-card">'
-        + '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--conflict);border-radius:16px 16px 0 0"></div>'
-        + '<div class="trust-big-label">충돌 주장</div>'
-        + '<div class="trust-big-num" style="color:var(--conflict)">' + conflictCount + '개</div>'
-        + '<div class="trust-big-sub">AI 간 의견 불일치</div>'
-        + '</div>'
-        + '</div>'
-        + '<div class="trust-mid-row">'
-        + '<div class="trust-chart-card">'
-        + '<div class="trust-chart-title">항목별 분석</div>'
-        + '<div class="trust-chart-bars">' + chartHTML + '</div>'
-        + '</div>'
-        + '<div class="trust-list-card">'
-        + '<div class="trust-list-title">주장 요약</div>'
-        + listHTML
-        + '</div>'
-        + '</div>'
-        + '<div class="trust-bottom-row">'
-        + '<div class="trust-mini-chip" style="background:var(--al);color:var(--accent)">전체 주장 ' + totalClaims + '개</div>'
-        + '<div class="trust-mini-chip" style="background:var(--verify-bg);color:var(--verify)">답변 풍부도 ' + richnessPct + '%</div>'
-        + '<div class="trust-mini-chip" style="background:var(--unique-bg);color:var(--unique)">고유 관점 ' + uniqueCount + '개</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">'
+        + cards.map(c =>
+          '<div style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);border-radius:16px;padding:14px 16px;position:relative;overflow:hidden;backdrop-filter:blur(20px);">'
+          + '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + c.bar + ';border-radius:16px 16px 0 0;"></div>'
+          + '<div style="font-size:18px;margin-bottom:8px;">' + c.icon + '</div>'
+          + '<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">' + c.label + '</div>'
+          + '<div style="font-size:32px;font-weight:800;color:' + c.color + ';line-height:1;margin-bottom:4px;">' + c.val + '<span style="font-size:14px;font-weight:700;margin-left:2px;">개</span></div>'
+          + '<div style="font-size:10px;color:var(--text3);font-weight:600;">' + c.sub + '</div>'
+          + '</div>'
+        ).join('')
         + '</div>';
     }
 
