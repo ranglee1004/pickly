@@ -1315,7 +1315,7 @@
     </div>
     <div class="s-div"></div>
     <div class="s-sec">비교 AI 선택</div>
-    <div class="ai-count">선택됨 <span id="aiCount">3</span>개 (최대 4개)</div>
+    <div class="ai-count">선택됨 <span id="aiCount">2</span>개 (최대 4개)</div>
     <div class="ai-list" id="aiList">
       <div class="ai-item on" data-ai="GPT-4o" data-color="#10A37F" draggable="true" onclick="toggleAI(this)">
         <span class="drag-handle" onmousedown="event.stopPropagation()">⠿</span>
@@ -1326,21 +1326,21 @@
         <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-left:auto">#1</span>
         <span class="ai-check">✓</span>
       </div>
-      <div class="ai-item on" data-ai="Claude" data-color="#C96442" draggable="true" onclick="toggleAI(this)">
-        <span class="drag-handle" onmousedown="event.stopPropagation()">⠿</span>
-        <span class="ai-logo-icon">
-
-        </span>
-        <span style="font-size:12px;font-weight:600">Claude</span>
-        <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-left:auto">#2</span>
-        <span class="ai-check">✓</span>
-      </div>
       <div class="ai-item on" data-ai="Gemini" data-color="#4285F4" draggable="true" onclick="toggleAI(this)">
         <span class="drag-handle" onmousedown="event.stopPropagation()">⠿</span>
         <span class="ai-logo-icon">
 
         </span>
         <span style="font-size:12px;font-weight:600">Gemini</span>
+        <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-left:auto">#2</span>
+        <span class="ai-check">✓</span>
+      </div>
+      <div class="ai-item" data-ai="Claude" data-color="#C96442" draggable="true" onclick="toggleAI(this)">
+        <span class="drag-handle" onmousedown="event.stopPropagation()">⠿</span>
+        <span class="ai-logo-icon">
+
+        </span>
+        <span style="font-size:12px;font-weight:600">Claude</span>
         <span style="font-size:9px;color:rgba(255,255,255,0.3);margin-left:auto">#3</span>
         <span class="ai-check">✓</span>
       </div>
@@ -2124,11 +2124,10 @@
 
 
 
-      // ai 3가지 역할로 답변 요청
+      // ai 2가지 역할로 답변 요청
       const roles = [
         { ai: 'GPT-4o', rank: '#1', prompt: `당신은 GPT-4o입니다. 다음 질문에 답하세요: ${q}` },
-        { ai: 'Claude', rank: '#2', prompt: `당신은 Claude입니다. 다음 질문에 답하세요: ${q}` },
-        { ai: 'Gemini', rank: '#3', prompt: `당신은 Gemini입니다. 다음 질문에 답하세요: ${q}` },
+        { ai: 'Gemini', rank: '#2', prompt: `당신은 Gemini입니다. 다음 질문에 답하세요: ${q}` },
       ];
 
       const answers = [];
@@ -2145,21 +2144,18 @@
 
       // Orchestrator - 주장 분류 요청
       const orchestratorPrompt = `
-      다음은 같은 질문 "${q}"에 대한 3개 AI의 답변입니다.
+      다음은 같은 질문 "${q}"에 대한 2개 AI의 답변입니다.
 
       [답변 A - GPT-4o]
       ${answers[0]}
 
-      [답변 B - Claude]  
+      [답변 B - Gemini]
       ${answers[1]}
 
-      [답변 C - Gemini]
-      ${answers[2]}
-
-      위 3개 답변을 분석해서 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만:
+      위 2개 답변을 분석해서 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만:
       {
         "common": [{"text": "공통으로 언급된 주장 1"}, {"text": "공통 주장 2"}],
-        "conflict": [{"text": "충돌하는 주장", "detail": "A는 이렇고 B는 저렇다"}],
+        "conflict": [{"text": "충돌하는 주장", "detail": "A는 이렇고 B는 저렇다", "ai": "GPT-4o"}],
         "verify": [{"text": "출처 확인이 필요한 내용"}],
         "unique": [{"ai": "GPT-4o", "text": "GPT만 언급한 내용"}]
       }`;
@@ -2461,8 +2457,17 @@
 
     function resetCompose() {
       selectedClaims = [];
-      renderClaims(currentData.claims);
-      updateComposed();
+      // composedArea 초기화
+      const area = document.getElementById('composedArea');
+      area.innerHTML = '<div class="composed-placeholder" id="composedPlaceholder">위에서 근거를 선택하면 여기에 쌓입니다.</div>';
+      // 선택된 버튼들 초기화
+      document.querySelectorAll('.claim-select-btn.picked').forEach(btn => {
+        btn.classList.remove('picked');
+        btn.textContent = '+ 근거 선택';
+        btn.closest('.claim-row').classList.remove('selected');
+      });
+      document.getElementById('step3').classList.remove('show');
+      updateSteps(2);
       updateSelCount();
     }
 
