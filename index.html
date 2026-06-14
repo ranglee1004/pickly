@@ -1483,7 +1483,7 @@
       <div class="legend">
         <div class="leg">
           <div class="leg-dot" style="background:var(--accent)"></div><span style="color:var(--accent)">공통 주장</span> —
-          3개 AI 모두 동의
+          <span id="legendCommonText">AI 모두 동의</span>
         </div>
         <div class="leg">
           <div class="leg-dot" style="background:var(--conflict)"></div><span style="color:var(--conflict)">충돌 주장</span>
@@ -2116,6 +2116,11 @@
       if (ql) ql.textContent = q;
       const purposeLabel = document.getElementById('purposeLabel');
       if (purposeLabel) purposeLabel.textContent = '🎯 ' + (selectedPurpose || '분석');
+
+      // 선택된 AI 개수에 맞게 범례 동적 업데이트
+      const selectedAICount = [...document.querySelectorAll('.ai-list .ai-item')].filter(i => i.classList.contains('on')).length;
+      const legendCommon = document.getElementById('legendCommonText');
+      if (legendCommon) legendCommon.textContent = selectedAICount + '개 AI 모두 동의';
       updateSteps(2);
 
       const cardsGrid = document.getElementById('cardsGrid');
@@ -2447,9 +2452,32 @@
     }
 
     function copyResult() {
-      const texts = selectedClaims.map(c => `[${c.claim.label}] ${c.claim.text}\n${c.claim.items.filter(it => it.text !== '언급하지 않음').map(it => `- ${it.ai}: ${it.text}`).join('\n')}`).join('\n\n');
+      const area = document.getElementById('composedArea');
+      const items = area.querySelectorAll('.composed-item');
+      if (items.length === 0) {
+        alert('선택된 근거가 없습니다. 위에서 근거를 선택해주세요.');
+        return;
+      }
+      let texts = '';
+      items.forEach(el => {
+        const tag = el.querySelector('.ci-tag')?.textContent?.trim() || '';
+        const txt = el.querySelector('.ci-text')?.innerText?.trim() || '';
+        texts += '[' + tag + '] ' + txt + '\n\n';
+      });
+      texts = texts.trim();
+      const btn = document.querySelector('.copy-btn');
       navigator.clipboard.writeText(texts).then(() => {
-        const btn = document.querySelector('.copy-btn');
+        btn.textContent = '✓ 복사됨!';
+        setTimeout(() => btn.textContent = '📋 답변 복사하기', 2000);
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = texts;
+        ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
         btn.textContent = '✓ 복사됨!';
         setTimeout(() => btn.textContent = '📋 답변 복사하기', 2000);
       });
