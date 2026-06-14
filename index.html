@@ -2273,6 +2273,7 @@
       }));
 
       currentClaims = claims;
+      window._currentAnswers = answers;
 
       // 로딩바 완료 후 숨기기
       lstep3.classList.remove('active');
@@ -2348,21 +2349,6 @@
           row.className = 'claim-row';
           row.id = 'cr-api-' + t.key + ci;
 
-          // AI별 답변 요약 표시
-          let aiBoxesHTML = '';
-          if (answers && answers.length > 0) {
-            aiBoxesHTML = '<div style="display:grid;grid-template-columns:repeat(' + aiNames.length + ',1fr);gap:8px;padding:10px 16px 14px;">';
-            aiNames.forEach((aiName, i) => {
-              const color = AI_COLORS[aiName] || '#6C5CE7';
-              const summary = answers[i] ? answers[i].slice(0, 120) + '...' : '응답 없음';
-              aiBoxesHTML += '<div style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:10px;">'
-                + '<div style="font-size:10px;font-weight:800;color:' + color + ';margin-bottom:6px;">' + aiName + '</div>'
-                + '<div style="font-size:11px;color:var(--text2);line-height:1.6;">' + summary + '</div>'
-                + '</div>';
-            });
-            aiBoxesHTML += '</div>';
-          }
-
           // 고유/충돌 주장이면 어떤 AI인지 태그 표시
           let aiTagHTML = '';
           if (item.ai) {
@@ -2370,39 +2356,77 @@
             aiTagHTML = ' <span style="font-size:10px;font-weight:700;color:' + color + ';background:rgba(255,255,255,0.35);padding:2px 8px;border-radius:6px;">' + item.ai + '</span>';
           }
 
+          // AI별 답변 박스 — 각각 개별 선택 버튼 포함
+          let aiBoxesHTML = '';
+          if (answers && answers.length > 0) {
+            aiBoxesHTML = '<div style="display:grid;grid-template-columns:repeat(' + aiNames.length + ',1fr);gap:8px;padding:10px 16px 14px;">';
+            aiNames.forEach((aiName, i) => {
+              const color = AI_COLORS[aiName] || '#6C5CE7';
+              const fullText = answers[i] || '응답 없음';
+              const summary = fullText.length > 150 ? fullText.slice(0, 150) + '...' : fullText;
+              const btnId = 'aibtn-' + t.key + '-' + ci + '-' + i;
+              aiBoxesHTML +=
+                '<div style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;">'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">'
+                + '<span style="font-size:11px;font-weight:800;color:' + color + ';">' + aiName + '</span>'
+                + '<button id="' + btnId + '" class="ai-pick-btn" '
+                + 'onclick="toggleAIPick(this, \'' + t.key + '\', ' + ci + ', ' + i + ', \'' + aiName + '\')" '
+                + 'style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:7px;border:1.5px solid ' + color + ';background:transparent;color:' + color + ';cursor:pointer;font-family:Nunito,sans-serif;transition:all 0.15s;">'
+                + '+ 선택'
+                + '</button>'
+                + '</div>'
+                + '<div style="font-size:11px;color:var(--text2);line-height:1.7;">' + summary + '</div>'
+                + '</div>';
+            });
+            aiBoxesHTML += '</div>';
+          }
+
           row.innerHTML =
-            '<div class="claim-head">'
+            '<div class="claim-head" style="cursor:default;">'
             + '<div class="claim-type type-' + t.type + '">' + getTypeIcon(t.type) + ' ' + t.label + '</div>'
             + '<div class="claim-text">' + (item.text || '') + aiTagHTML + '</div>'
-            + '<button class="claim-select-btn" onclick="toggleSelectAPI(this, \'' + t.key + '\', ' + ci + ')">+ 근거 선택</button>'
             + '</div>'
-            + (item.detail ? '<div style="padding:10px 16px;font-size:11px;color:var(--text2);background:rgba(255,255,255,0.1);">⚡ ' + item.detail + '</div>' : '')
+            + (item.detail ? '<div style="padding:8px 16px;font-size:11px;color:var(--text2);background:rgba(255,255,255,0.1);">⚡ ' + item.detail + '</div>' : '')
             + aiBoxesHTML;
           section.appendChild(row);
         });
       });
     }
 
-    function toggleSelectAPI(btn, type, idx) {
+    function toggleAIPick(btn, type, claimIdx, aiIdx, aiName) {
       const isPicked = btn.classList.contains('picked');
-      btn.classList.toggle('picked', !isPicked);
-      btn.textContent = isPicked ? '+ 근거 선택' : '✓ 선택됨';
-      btn.closest('.claim-row').classList.toggle('selected', !isPicked);
+      const color = AI_COLORS[aiName] || '#6C5CE7';
 
-      if (!isPicked && currentClaims) {
-        const item = currentClaims[type]?.[idx];
-        if (item) {
-          addToCompose(item.text, type, item.ai);
-          // Step 3 표시 및 스크롤
-          updateSteps(3);
-          setTimeout(() => document.getElementById('step3').scrollIntoView({ behavior: 'smooth' }), 200);
-        }
-      } else if (isPicked) {
-        // 선택 해제 시 composedArea에서 해당 항목 제거
+      if (!isPicked) {
+        // 선택
+        btn.classList.add('picked');
+        btn.textContent = '✓ 선택됨';
+        btn.style.background = color;
+        btn.style.color = '#fff';
+        btn.style.borderColor = color;
+
+        // 해당 AI 답변 전체 텍스트 가져오기
+        const aiAnswers = window._currentAnswers || [];
+        const text = aiAnswers[aiIdx] || '';
+        const claimText = currentClaims[type]?.[claimIdx]?.text || '';
+
+        // composedArea에 추가 — 주장 제목 + AI 답변
+        addToCompose(claimText + '\n' + text, type, aiName, type + '-' + claimIdx + '-' + aiIdx);
+
+        updateSteps(3);
+        setTimeout(() => document.getElementById('step3').scrollIntoView({ behavior: 'smooth' }), 200);
+      } else {
+        // 선택 해제
+        btn.classList.remove('picked');
+        btn.textContent = '+ 선택';
+        btn.style.background = 'transparent';
+        btn.style.color = color;
+        btn.style.borderColor = color;
+
+        // composedArea에서 제거
         const area = document.getElementById('composedArea');
-        const allItems = area.querySelectorAll('.composed-item');
-        allItems.forEach(el => {
-          if (el.dataset.claimKey === type + '-' + idx) el.remove();
+        area.querySelectorAll('.composed-item').forEach(el => {
+          if (el.dataset.claimKey === type + '-' + claimIdx + '-' + aiIdx) el.remove();
         });
         if (area.querySelectorAll('.composed-item').length === 0) {
           area.innerHTML = '<div class="composed-placeholder" id="composedPlaceholder">위에서 근거를 선택하면 여기에 쌓입니다.</div>';
@@ -2410,10 +2434,9 @@
           updateSteps(2);
         }
       }
-      updateSelCount();
     }
 
-    function addToCompose(text, type, aiName) {
+    function addToCompose(text, type, aiName, claimKey) {
       document.getElementById('step3').classList.add('show');
       const area = document.getElementById('composedArea');
       const ph = document.getElementById('composedPlaceholder');
@@ -2423,23 +2446,31 @@
       const typeBgs = { common: 'var(--al)', conflict: 'var(--conflict-bg)', verify: 'var(--verify-bg)', unique: 'var(--unique-bg)' };
       const typeLabels = { common: '공통', conflict: '충돌', verify: '검증', unique: '고유' };
 
-      // 현재 항목 수 기준으로 key 생성
-      const keyIdx = area.querySelectorAll('.composed-item').length;
-
+      const aiColor = AI_COLORS[aiName] || '#6C5CE7';
       const aiTag = aiName
-        ? ' <span style="font-size:9px;font-weight:700;color:' + (AI_COLORS[aiName] || '#6C5CE7') + ';background:rgba(255,255,255,0.4);padding:1px 6px;border-radius:4px;">' + aiName + '</span>'
+        ? '<span style="font-size:9px;font-weight:700;color:' + aiColor + ';background:rgba(255,255,255,0.5);padding:2px 7px;border-radius:5px;margin-right:6px;">' + aiName + '</span>'
         : '';
+
+      // 본문 중 첫 줄(주장 제목)과 나머지(AI 답변) 분리
+      const lines = text.split('\n');
+      const claimTitle = lines[0] || '';
+      const answerBody = lines.slice(1).join('\n').trim();
+      const shortAnswer = answerBody.length > 200 ? answerBody.slice(0, 200) + '...' : answerBody;
 
       const el = document.createElement('div');
       el.className = 'composed-item';
-      el.dataset.claimKey = type + '-' + keyIdx;
+      el.dataset.claimKey = claimKey || ('auto-' + Date.now());
       el.innerHTML =
-        '<span class="ci-tag" style="background:' + (typeBgs[type] || 'var(--al)') + ';color:' + (typeColors[type] || 'var(--accent)') + '">'
-        + (typeLabels[type] || type) + '</span>'
-        + '<div class="ci-text">' + text + aiTag + '</div>'
-        + '<button class="ci-remove" onclick="this.parentElement.remove();updateSelCount();">✕</button>';
+        '<div style="display:flex;flex-direction:column;gap:6px;flex:1;">'
+        + '<div style="display:flex;align-items:center;gap:6px;">'
+        + '<span class="ci-tag" style="background:' + (typeBgs[type] || 'var(--al)') + ';color:' + (typeColors[type] || 'var(--accent)') + '">' + (typeLabels[type] || type) + '</span>'
+        + aiTag
+        + '<span style="font-size:12px;font-weight:700;color:var(--text);">' + claimTitle + '</span>'
+        + '</div>'
+        + (shortAnswer ? '<div class="ci-text" style="font-size:11px;color:var(--text2);line-height:1.6;padding-left:4px;">' + shortAnswer + '</div>' : '')
+        + '</div>'
+        + '<button class="ci-remove" onclick="this.parentElement.remove();" style="align-self:flex-start;">✕</button>';
       area.appendChild(el);
-      updateSelCount();
     }
 
     function renderTrust(trust) {
