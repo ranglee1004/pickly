@@ -1264,25 +1264,100 @@
       min-width: 80px;
     }
 
-    /* 선택 카운터 */
-    .selected-count {
+    /* 로딩바 */
+    .loading-bar-wrap {
       display: none;
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: rgba(108, 92, 231, 0.75);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: #fff;
-      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.45);
       border-radius: 20px;
-      font-size: 13px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      box-shadow: 0 8px 40px rgba(108, 92, 231, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .loading-bar-wrap.show {
+      display: block;
+    }
+
+    .loading-steps {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .loading-step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 11px;
       font-weight: 700;
-      box-shadow: 0 8px 24px rgba(45, 106, 85, 0.3);
-      cursor: pointer;
-      transition: all 0.2s;
-      z-index: 100;
+      color: var(--text3);
+      transition: all 0.3s;
+    }
+
+    .loading-step.active {
+      background: rgba(108, 92, 231, 0.15);
+      border-color: rgba(108, 92, 231, 0.4);
+      color: var(--accent);
+    }
+
+    .loading-step.done {
+      background: rgba(108, 92, 231, 0.1);
+      border-color: rgba(108, 92, 231, 0.2);
+      color: var(--accent2);
+    }
+
+    .loading-step-icon {
+      font-size: 14px;
+    }
+
+    .loading-track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .loading-fill {
+      height: 100%;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #6C5CE7, #A29BFE);
+      transition: width 0.6s cubic-bezier(.4, 0, .2, 1);
+      width: 0%;
+    }
+
+    .loading-msg {
+      font-size: 12px;
+      color: var(--text2);
+      font-weight: 600;
+      text-align: center;
+    }
+
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: rgba(108, 92, 231, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(45, 106, 85, 0.3);
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 100;
     }
 
     .selected-count.show {
@@ -1476,7 +1551,18 @@
         <div class="purpose-badge" id="purposeBadge"><span id="purposeLabel"></span></div>
       </div>
 
-      <!-- 신뢰도 대시보드 -->
+      <!-- 로딩바 -->
+      <div class="loading-bar-wrap" id="loadingBar">
+        <div class="loading-steps">
+          <div class="loading-step" id="lstep1"><span class="loading-step-icon">🤖</span> GPT-4o 응답 중</div>
+          <div class="loading-step" id="lstep2"><span class="loading-step-icon">✨</span> Gemini 응답 중</div>
+          <div class="loading-step" id="lstep3"><span class="loading-step-icon">🔍</span> 주장 분석 중</div>
+        </div>
+        <div class="loading-track">
+          <div class="loading-fill" id="loadingFill"></div>
+        </div>
+        <div class="loading-msg" id="loadingMsg">AI 답변을 가져오는 중...</div>
+      </div>
       <div class="trust-dashboard" id="trustPanel"></div>
 
       <!-- 범례 -->
@@ -2123,11 +2209,17 @@
       if (legendCommon) legendCommon.textContent = selectedAICount + '개 AI 모두 동의';
       updateSteps(2);
 
-      const cardsGrid = document.getElementById('cardsGrid');
-      if (cardsGrid) cardsGrid.innerHTML =
-        '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#A29BFE;font-size:14px">🤖 AI 답변 분석 중...</div>';
-
-
+      // 로딩바 표시
+      const loadingBar = document.getElementById('loadingBar');
+      const loadingFill = document.getElementById('loadingFill');
+      const loadingMsg = document.getElementById('loadingMsg');
+      const lstep1 = document.getElementById('lstep1');
+      const lstep2 = document.getElementById('lstep2');
+      const lstep3 = document.getElementById('lstep3');
+      loadingBar.classList.add('show');
+      lstep1.classList.add('active');
+      loadingFill.style.width = '10%';
+      loadingMsg.textContent = 'GPT-4o 답변 요청 중...';
 
       // ai 2가지 역할로 답변 요청
       const roles = [
@@ -2136,15 +2228,28 @@
       ];
 
       const answers = [];
-      for (const r of roles) {
+      for (let i = 0; i < roles.length; i++) {
+        const r = roles[i];
         let ans;
         if (r.ai === 'GPT-4o') {
           ans = await callGPT(r.prompt);
+          lstep1.classList.remove('active');
+          lstep1.classList.add('done');
+          lstep1.querySelector('.loading-step-icon').textContent = '✅';
+          lstep2.classList.add('active');
+          loadingFill.style.width = '40%';
+          loadingMsg.textContent = 'Gemini 답변 요청 중...';
         } else {
           ans = await callGemini(r.prompt);
+          lstep2.classList.remove('active');
+          lstep2.classList.add('done');
+          lstep2.querySelector('.loading-step-icon').textContent = '✅';
+          lstep3.classList.add('active');
+          loadingFill.style.width = '70%';
+          loadingMsg.textContent = '주장 분석 중...';
         }
         answers.push(ans);
-        await new Promise(res => setTimeout(res, 1000));
+        await new Promise(res => setTimeout(res, 300));
       }
 
       // Orchestrator - 주장 분류 요청
@@ -2187,8 +2292,27 @@
       }));
 
       currentClaims = claims;
+
+      // 로딩바 완료 후 숨기기
+      lstep3.classList.remove('active');
+      lstep3.classList.add('done');
+      lstep3.querySelector('.loading-step-icon').textContent = '✅';
+      loadingFill.style.width = '100%';
+      loadingMsg.textContent = '분석 완료!';
+      setTimeout(() => {
+        loadingBar.classList.remove('show');
+        // 로딩 스텝 초기화 (다음 검색을 위해)
+        [lstep1, lstep2, lstep3].forEach(s => {
+          s.classList.remove('active', 'done');
+        });
+        lstep1.querySelector('.loading-step-icon').textContent = '🤖';
+        lstep2.querySelector('.loading-step-icon').textContent = '✨';
+        lstep3.querySelector('.loading-step-icon').textContent = '🔍';
+        loadingFill.style.width = '0%';
+      }, 800);
+
       renderCards2(data);
-      renderClaimsFromAPI(claims);
+      renderClaimsFromAPI(claims, answers);
       // renderDiff(data);
 
       function renderCards2(data) {
