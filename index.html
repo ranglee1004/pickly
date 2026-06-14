@@ -1340,36 +1340,6 @@
       font-weight: 600;
       text-align: center;
     }
-
-    display: none;
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: rgba(108, 92, 231, 0.75);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #fff;
-    padding: 12px 20px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 700;
-    box-shadow: 0 8px 24px rgba(45, 106, 85, 0.3);
-    cursor: pointer;
-    transition: all 0.2s;
-    z-index: 100;
-    }
-
-    .selected-count.show {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .selected-count:hover {
-      background: var(--accent2);
-      transform: translateY(-2px);
-    }
   </style>
 </head>
 
@@ -1609,10 +1579,7 @@
     </div>
   </main>
 
-  <!-- 선택 카운터 -->
-  <div class="selected-count" id="selCount" onclick="scrollToStep3()">
-    ✓ <span id="selNum">0</span>개 근거 선택됨 → 조합 보기
-  </div>
+
 
   <script>
     async function callGemini(prompt) {
@@ -1923,7 +1890,16 @@
     document.addEventListener('DOMContentLoaded', function () { initDragDrop(); initSidebarLogos(); });
     // ─────────────────────────────────────────────
 
+    // 현재 API 연결된 AI 목록
+    const CONNECTED_AIS = ['GPT-4o', 'Gemini'];
+
     function toggleAI(el) {
+      const aiName = el.dataset.ai;
+      // 연결 안 된 AI 선택 시 알럿
+      if (!el.classList.contains('on') && !CONNECTED_AIS.includes(aiName)) {
+        alert('🚧 ' + aiName + ' 은(는) 현재 개발 중입니다.\nGPT-4o와 Gemini만 사용 가능합니다.');
+        return;
+      }
       const list = document.querySelectorAll('.ai-list .ai-item');
       const onCount = [...list].filter(i => i.classList.contains('on')).length;
       if (el.classList.contains('on')) {
@@ -2130,6 +2106,11 @@
     }
 
     function addAIFromSearch(name, color) {
+      // 연결 안 된 AI 추가 시 알럿
+      if (!CONNECTED_AIS.includes(name)) {
+        alert('🚧 ' + name + ' 은(는) 현재 개발 중입니다.\nGPT-4o와 Gemini만 사용 가능합니다.');
+        return;
+      }
       const list = document.getElementById('aiList');
       const existing = [...list.querySelectorAll('.ai-item')].map(function (i) { return i.dataset.ai; });
       if (existing.includes(name)) return;
@@ -2344,7 +2325,9 @@
 
     let currentClaims = null;
 
-    function renderClaimsFromAPI(claims) {
+    const AI_COLORS = { 'GPT-4o': '#10A37F', 'Claude': '#C96442', 'Gemini': '#4285F4' };
+
+    function renderClaimsFromAPI(claims, answers) {
       const section = document.getElementById('claimsSection');
       if (!section) return;
       section.innerHTML = '';
@@ -2356,19 +2339,45 @@
         { key: 'unique', label: '고유 관점', type: 'unique' },
       ];
 
+      const aiNames = ['GPT-4o', 'Gemini'];
+
       types.forEach(t => {
         const items = claims[t.key] || [];
         items.forEach((item, ci) => {
           const row = document.createElement('div');
           row.className = 'claim-row';
           row.id = 'cr-api-' + t.key + ci;
+
+          // AI별 답변 요약 표시
+          let aiBoxesHTML = '';
+          if (answers && answers.length > 0) {
+            aiBoxesHTML = '<div style="display:grid;grid-template-columns:repeat(' + aiNames.length + ',1fr);gap:8px;padding:10px 16px 14px;">';
+            aiNames.forEach((aiName, i) => {
+              const color = AI_COLORS[aiName] || '#6C5CE7';
+              const summary = answers[i] ? answers[i].slice(0, 120) + '...' : '응답 없음';
+              aiBoxesHTML += '<div style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:10px;">'
+                + '<div style="font-size:10px;font-weight:800;color:' + color + ';margin-bottom:6px;">' + aiName + '</div>'
+                + '<div style="font-size:11px;color:var(--text2);line-height:1.6;">' + summary + '</div>'
+                + '</div>';
+            });
+            aiBoxesHTML += '</div>';
+          }
+
+          // 고유/충돌 주장이면 어떤 AI인지 태그 표시
+          let aiTagHTML = '';
+          if (item.ai) {
+            const color = AI_COLORS[item.ai] || '#6C5CE7';
+            aiTagHTML = ' <span style="font-size:10px;font-weight:700;color:' + color + ';background:rgba(255,255,255,0.35);padding:2px 8px;border-radius:6px;">' + item.ai + '</span>';
+          }
+
           row.innerHTML =
             '<div class="claim-head">'
             + '<div class="claim-type type-' + t.type + '">' + getTypeIcon(t.type) + ' ' + t.label + '</div>'
-            + '<div class="claim-text">' + (item.text || '') + '</div>'
+            + '<div class="claim-text">' + (item.text || '') + aiTagHTML + '</div>'
             + '<button class="claim-select-btn" onclick="toggleSelectAPI(this, \'' + t.key + '\', ' + ci + ')">+ 근거 선택</button>'
             + '</div>'
-            + (item.detail ? '<div style="padding:10px 16px;font-size:11px;color:var(--text2);background:var(--bg)">' + item.detail + '</div>' : '');
+            + (item.detail ? '<div style="padding:10px 16px;font-size:11px;color:var(--text2);background:rgba(255,255,255,0.1);">⚡ ' + item.detail + '</div>' : '')
+            + aiBoxesHTML;
           section.appendChild(row);
         });
       });
@@ -2382,27 +2391,54 @@
 
       if (!isPicked && currentClaims) {
         const item = currentClaims[type]?.[idx];
-        if (item) addToCompose(item.text, type);
+        if (item) {
+          addToCompose(item.text, type, item.ai);
+          // Step 3 표시 및 스크롤
+          updateSteps(3);
+          setTimeout(() => document.getElementById('step3').scrollIntoView({ behavior: 'smooth' }), 200);
+        }
+      } else if (isPicked) {
+        // 선택 해제 시 composedArea에서 해당 항목 제거
+        const area = document.getElementById('composedArea');
+        const allItems = area.querySelectorAll('.composed-item');
+        allItems.forEach(el => {
+          if (el.dataset.claimKey === type + '-' + idx) el.remove();
+        });
+        if (area.querySelectorAll('.composed-item').length === 0) {
+          area.innerHTML = '<div class="composed-placeholder" id="composedPlaceholder">위에서 근거를 선택하면 여기에 쌓입니다.</div>';
+          document.getElementById('step3').classList.remove('show');
+          updateSteps(2);
+        }
       }
       updateSelCount();
     }
 
-    function addToCompose(text, type) {
+    function addToCompose(text, type, aiName) {
       document.getElementById('step3').classList.add('show');
       const area = document.getElementById('composedArea');
       const ph = document.getElementById('composedPlaceholder');
       if (ph) ph.remove();
 
       const typeColors = { common: 'var(--accent)', conflict: 'var(--conflict)', verify: 'var(--verify)', unique: 'var(--unique)' };
+      const typeBgs = { common: 'var(--al)', conflict: 'var(--conflict-bg)', verify: 'var(--verify-bg)', unique: 'var(--unique-bg)' };
       const typeLabels = { common: '공통', conflict: '충돌', verify: '검증', unique: '고유' };
 
-      const item = document.createElement('div');
-      item.className = 'composed-item';
-      item.innerHTML = '<span class="ci-tag" style="background:var(--al);color:' + (typeColors[type] || 'var(--accent)') + '">'
+      // 현재 항목 수 기준으로 key 생성
+      const keyIdx = area.querySelectorAll('.composed-item').length;
+
+      const aiTag = aiName
+        ? ' <span style="font-size:9px;font-weight:700;color:' + (AI_COLORS[aiName] || '#6C5CE7') + ';background:rgba(255,255,255,0.4);padding:1px 6px;border-radius:4px;">' + aiName + '</span>'
+        : '';
+
+      const el = document.createElement('div');
+      el.className = 'composed-item';
+      el.dataset.claimKey = type + '-' + keyIdx;
+      el.innerHTML =
+        '<span class="ci-tag" style="background:' + (typeBgs[type] || 'var(--al)') + ';color:' + (typeColors[type] || 'var(--accent)') + '">'
         + (typeLabels[type] || type) + '</span>'
-        + '<div class="ci-text">' + text + '</div>'
-        + '<button class="ci-remove" onclick="this.parentElement.remove()">✕</button>';
-      area.appendChild(item);
+        + '<div class="ci-text">' + text + aiTag + '</div>'
+        + '<button class="ci-remove" onclick="this.parentElement.remove();updateSelCount();">✕</button>';
+      area.appendChild(el);
       updateSelCount();
     }
 
@@ -2566,9 +2602,7 @@
     }
 
     function updateSelCount() {
-      const el = document.getElementById('selCount');
-      document.getElementById('selNum').textContent = selectedClaims.length;
-      el.classList.toggle('show', selectedClaims.length > 0);
+      // 플로팅 버튼 제거됨 - 빈 함수 유지 (호환성)
     }
 
     function scrollToStep3() {
