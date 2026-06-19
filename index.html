@@ -1576,23 +1576,50 @@
 
   <script>
     async function callGemini(prompt) {
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      const data = await res.json();
-      return data.text || '응답 없음';
+      try {
+        const res = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+        // 에러 응답 처리 (디버그 모드 등으로 data.error가 올 경우)
+        if (data.error) {
+          console.error('Gemini API error:', data.error);
+          return '⚠️ Gemini 응답 실패: ' + (data.error.message || JSON.stringify(data.error));
+        }
+        if (!data.text || data.text.trim() === '') {
+          console.warn('Gemini returned empty text:', data);
+          return '⚠️ Gemini로부터 응답을 받지 못했습니다.';
+        }
+        return data.text;
+      } catch (e) {
+        console.error('callGemini exception:', e);
+        return '⚠️ Gemini 호출 중 오류가 발생했습니다: ' + e.message;
+      }
     }
 
     async function callGPT(prompt) {
-      const res = await fetch('/api/openai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      const data = await res.json();
-      return data.text || '응답 없음';
+      try {
+        const res = await fetch('/api/openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+        const data = await res.json();
+        if (data.error) {
+          console.error('OpenAI API error:', data.error);
+          return '⚠️ GPT 응답 실패: ' + (data.error.message || JSON.stringify(data.error));
+        }
+        if (!data.text || data.text.trim() === '') {
+          console.warn('GPT returned empty text:', data);
+          return '⚠️ GPT로부터 응답을 받지 못했습니다.';
+        }
+        return data.text;
+      } catch (e) {
+        console.error('callGPT exception:', e);
+        return '⚠️ GPT 호출 중 오류가 발생했습니다: ' + e.message;
+      }
     }
     function getAILogo(name, size) {
       size = size || 22;
@@ -2215,6 +2242,19 @@
           + '</div>';
       }
 
+      // 503(서버 혼잡) 시 자동 재시도하는 헬퍼
+      async function callWithRetry(fn, prompt, maxRetries) {
+        maxRetries = maxRetries || 2;
+        let lastResult = '';
+        for (let i = 1; i <= maxRetries; i++) {
+          lastResult = await fn(prompt);
+          const is503 = lastResult.includes('503') || lastResult.includes('UNAVAILABLE') || lastResult.includes('high demand') || lastResult.includes('혼잡');
+          if (!lastResult.startsWith('⚠️') || !is503) return lastResult;
+          if (i < maxRetries) await new Promise(res => setTimeout(res, i * 1500));
+        }
+        return lastResult;
+      }
+
       // ai 2가지 역할로 답변 요청
       const roles = [
         { ai: 'GPT-4o', rank: '#1', prompt: `당신은 GPT-4o입니다. 다음 질문에 답하세요: ${q}` },
@@ -2226,7 +2266,7 @@
         const r = roles[i];
         let ans;
         if (r.ai === 'GPT-4o') {
-          ans = await callGPT(r.prompt);
+          ans = await callWithRetry(callGPT, r.prompt);
           lstep1.classList.remove('active');
           lstep1.classList.add('done');
           lstep1.querySelector('.loading-step-icon').textContent = '✅';
@@ -2234,7 +2274,7 @@
           loadingFill.style.width = '40%';
           loadingMsg.textContent = 'Gemini 답변 요청 중...';
         } else {
-          ans = await callGemini(r.prompt);
+          ans = await callWithRetry(callGemini, r.prompt);
           lstep2.classList.remove('active');
           lstep2.classList.add('done');
           lstep2.querySelector('.loading-step-icon').textContent = '✅';
@@ -2247,33 +2287,73 @@
       }
 
       // Orchestrator - 주장 분류 요청
-      const orchestratorPrompt = `
-      다음은 같은 질문 "${q}"에 대한 2개 AI의 답변입니다.
+      const orchestratorPrompt = `당신은 두 AI의 답변을 비교 분석하는 전문가입니다.
 
-      [답변 A - GPT-4o]
-      ${answers[0]}
+질문: "${q}"
 
-      [답변 B - Gemini]
-      ${answers[1]}
+[답변 A - GPT-4o]
+${answers[0]}
 
-      위 2개 답변을 분석해서 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만:
-      {
-        "common": [{"text": "공통으로 언급된 주장 1"}, {"text": "공통 주장 2"}],
-        "conflict": [{"text": "충돌하는 주장", "detail": "A는 이렇고 B는 저렇다", "ai": "GPT-4o"}],
-        "verify": [{"text": "출처 확인이 필요한 내용"}],
-        "unique": [{"ai": "GPT-4o", "text": "GPT만 언급한 내용"}]
-      }`;
+[답변 B - Gemini]
+${answers[1]}
+
+위 두 답변을 문장 단위로 비교 분석하세요. 반드시 아래 규칙을 따르세요:
+1. 두 답변에서 같은 의미로 언급된 내용은 "common"에 넣으세요. (최소 1개 이상 찾아보세요. 표현이 다르더라도 의미가 같으면 공통 주장입니다)
+2. 두 답변이 서로 다르게 설명하거나 상반된 내용은 "conflict"에 넣으세요.
+3. 출처나 근거 확인이 필요해 보이는 주장은 "verify"에 넣으세요.
+4. 한쪽 AI만 언급한 고유한 내용은 "unique"에 넣고 "ai" 필드에 "GPT-4o" 또는 "Gemini" 중 어떤 AI가 언급했는지 명시하세요.
+
+반드시 각 카테고리에 최소 1개 이상의 항목을 채워 넣으려고 노력하세요. 절대 모든 배열을 비워두지 마세요.
+
+다른 설명 없이 아래 JSON 형식으로만 응답하세요:
+{
+  "common": [{"text": "공통으로 언급된 주장"}],
+  "conflict": [{"text": "충돌하는 주장", "detail": "A는 이렇고 B는 저렇다", "ai": "GPT-4o"}],
+  "verify": [{"text": "출처 확인이 필요한 내용"}],
+  "unique": [{"ai": "GPT-4o", "text": "해당 AI만 언급한 내용"}]
+}`;
+
+      async function tryOrchestrator() {
+        const raw = await callGemini(orchestratorPrompt);
+        if (raw.startsWith('⚠️')) {
+          throw new Error(raw);
+        }
+        const json = raw.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(json);
+        const totalItems = (parsed.common || []).length + (parsed.conflict || []).length
+          + (parsed.verify || []).length + (parsed.unique || []).length;
+        if (totalItems === 0) {
+          throw new Error('분석 결과가 비어있습니다.');
+        }
+        return parsed;
+      }
 
       let claims;
-      try {
-        const raw = await callGemini(orchestratorPrompt);
-        const json = raw.replace(/```json|```/g, '').trim();
-        claims = JSON.parse(json);
-      } catch (e) {
-        claims = {
-          common: [{ text: '분석 중 오류가 발생했습니다. 다시 시도해주세요.' }],
-          conflict: [], verify: [], unique: []
-        };
+      let orchestratorError = null;
+      const MAX_RETRIES = 3;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          if (loadingMsg) loadingMsg.textContent = attempt === 1 ? '주장 분석 중...' : 'Gemini 서버 혼잡 — 재시도 중... (' + attempt + '/' + MAX_RETRIES + ')';
+          claims = await tryOrchestrator();
+          orchestratorError = null;
+          break;
+        } catch (e) {
+          console.error('Orchestrator attempt ' + attempt + ' failed:', e);
+          const msg = e.message || '';
+          const is503 = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand');
+          orchestratorError = is503
+            ? 'Gemini 서버가 현재 혼잡합니다. 잠시 후 다시 시도해주세요.'
+            : (msg || '알 수 없는 오류');
+          claims = { common: [], conflict: [], verify: [], unique: [] };
+          if (attempt < MAX_RETRIES) {
+            // 503(서버 혼잡)이면 더 길게 대기 (지수 백오프)
+            const waitTime = is503 ? attempt * 2000 : 800;
+            if (loadingMsg) loadingMsg.textContent = is503
+              ? 'Gemini 서버 혼잡 — ' + (waitTime / 1000) + '초 후 재시도...'
+              : '재시도 준비 중...';
+            await new Promise(res => setTimeout(res, waitTime));
+          }
+        }
       }
 
       // 실제 데이터로 렌더링
@@ -2307,7 +2387,7 @@
       }, 800);
 
       renderCards2(data);
-      renderClaimsFromAPI(claims, answers);
+      renderClaimsFromAPI(claims, answers, orchestratorError);
       renderTrustFromAPI(claims, answers);
 
       function renderCards2(data) {
@@ -2341,10 +2421,22 @@
 
     const AI_COLORS = { 'GPT-4o': '#10A37F', 'Claude': '#C96442', 'Gemini': '#4285F4' };
 
-    function renderClaimsFromAPI(claims, answers) {
+    function renderClaimsFromAPI(claims, answers, orchestratorError) {
       const section = document.getElementById('claimsSection');
       if (!section) return;
       section.innerHTML = '';
+
+      // 분석 실패 시 명확한 안내 + 재시도 버튼
+      if (orchestratorError) {
+        section.innerHTML =
+          '<div style="text-align:center;padding:40px 24px;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.25);border-radius:16px;">'
+          + '<div style="font-size:28px;margin-bottom:10px;">😵</div>'
+          + '<div style="font-size:15px;font-weight:800;color:var(--conflict);margin-bottom:6px;">주장 분석에 실패했습니다</div>'
+          + '<div style="font-size:13px;color:var(--text2);margin-bottom:16px;">' + orchestratorError + '</div>'
+          + '<button onclick="doSearch()" style="padding:10px 24px;border-radius:10px;background:linear-gradient(135deg,#6C5CE7,#A29BFE);border:none;color:#fff;font-size:13px;font-weight:800;font-family:Nunito,sans-serif;cursor:pointer;">🔄 다시 분석하기</button>'
+          + '</div>';
+        return;
+      }
 
       const types = [
         { key: 'common', label: '공통 주장', type: 'common' },
