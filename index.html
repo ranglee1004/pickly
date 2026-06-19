@@ -2210,6 +2210,17 @@
       if (legendCommon) legendCommon.textContent = selectedAICount + '개 AI 모두 동의';
       updateSteps(2);
 
+      // 이전 검색 결과 초기화 (재검색 시 잔여 데이터 방지)
+      currentClaims = null;
+      window._currentAnswers = null;
+      const claimsSection = document.getElementById('claimsSection');
+      if (claimsSection) claimsSection.innerHTML = '';
+      const composedArea = document.getElementById('composedArea');
+      if (composedArea) composedArea.innerHTML = '<div class="composed-placeholder" id="composedPlaceholder">위에서 근거를 선택하면 여기에 쌓입니다.</div>';
+      const trustPanel = document.getElementById('trustPanel');
+      if (trustPanel) trustPanel.innerHTML = '';
+      document.getElementById('step3').classList.remove('show');
+
       // 로딩바 표시
       const loadingBar = document.getElementById('loadingBar');
       const loadingFill = document.getElementById('loadingFill');
@@ -2898,11 +2909,34 @@ ${answers[1]}
     function resetAll() {
       selectedClaims = [];
       selectedPurpose = '';
+      currentClaims = null;
+      window._currentAnswers = null;
+
       document.getElementById('step1').style.display = 'block';
       document.getElementById('step2').classList.remove('show');
       document.getElementById('step3').classList.remove('show');
       document.querySelectorAll('.purpose-card').forEach(c => c.classList.remove('on'));
       document.getElementById('qi').value = '';
+
+      // 이전 검색 결과 완전 초기화
+      const claimsSection = document.getElementById('claimsSection');
+      if (claimsSection) claimsSection.innerHTML = '';
+
+      const composedArea = document.getElementById('composedArea');
+      if (composedArea) composedArea.innerHTML = '<div class="composed-placeholder" id="composedPlaceholder">위에서 근거를 선택하면 여기에 쌓입니다.</div>';
+
+      const trustPanel = document.getElementById('trustPanel');
+      if (trustPanel) trustPanel.innerHTML = '';
+
+      const cardsGrid = document.getElementById('cardsGrid');
+      if (cardsGrid) cardsGrid.innerHTML = '';
+
+      const ql = document.getElementById('ql');
+      if (ql) ql.textContent = '';
+
+      const purposeLabel = document.getElementById('purposeLabel');
+      if (purposeLabel) purposeLabel.textContent = '';
+
       updateSteps(1);
       updateSelCount();
     }
