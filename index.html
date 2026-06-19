@@ -2477,9 +2477,10 @@ ${answers[1]}
           let aiBoxesHTML = '';
           if (answers && answers.length > 0) {
             // unique/conflict 타입이고 item.ai가 지정된 경우 → 해당 AI만 보여주고 나머지는 "언급 없음"
-            const isUniqueOrConflict = (t.key === 'unique' || t.key === 'conflict') && item.ai;
+            // unique 타입(고유 관점)만 해당 AI만 선택 가능, conflict는 둘 다 선택 가능 (서로 다른 관점이므로 비교 필요)
+            const isUniqueOnly = (t.key === 'unique') && item.ai;
 
-            if (isUniqueOrConflict) {
+            if (isUniqueOnly) {
               // 지정된 AI만 선택 가능하게, 나머지는 "언급 없음" 표시
               aiBoxesHTML = '<div style="display:grid;grid-template-columns:repeat(' + aiNames.length + ',1fr);gap:8px;padding:10px 16px 14px;">';
               aiNames.forEach((aiName, i) => {
@@ -2521,7 +2522,7 @@ ${answers[1]}
               });
               aiBoxesHTML += '</div>';
             } else {
-              // 공통/검증 타입 → 모든 AI 선택 가능
+              // 공통/충돌/검증 타입 → 모든 AI 선택 가능 (충돌은 양쪽 관점 비교가 필요하므로)
               aiBoxesHTML = '<div style="display:grid;grid-template-columns:repeat(' + aiNames.length + ',1fr);gap:8px;padding:10px 16px 14px;">';
               aiNames.forEach((aiName, i) => {
                 const color = AI_COLORS[aiName] || '#6C5CE7';
